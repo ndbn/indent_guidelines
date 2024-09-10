@@ -6,12 +6,14 @@ signal sig_plugin_disabled
 const draw_guidelines: bool = true
 const draw_linegutter: bool = false
 
-func _enable_plugin() -> void:
+func _enter_tree() -> void:
   if not Engine.is_editor_hint(): return
-  EditorInterface.get_script_editor().editor_script_changed.connect(_editor_script_changed)
-  EditorInterface.get_script_editor().editor_script_changed.emit(EditorInterface.get_script_editor().get_current_script())
+  var script_editor: ScriptEditor = EditorInterface.get_script_editor()
+  if not script_editor.editor_script_changed.is_connected(_editor_script_changed):
+    script_editor.editor_script_changed.connect(_editor_script_changed)
+    script_editor.editor_script_changed.emit(EditorInterface.get_script_editor().get_current_script())
 
-func _disable_plugin() -> void:
+func _exit_tree() -> void:
   sig_plugin_disabled.emit()
 
 func _editor_script_changed(_s: Script)->void:
