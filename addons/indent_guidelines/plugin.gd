@@ -4,7 +4,7 @@ extends EditorPlugin
 signal sig_plugin_disabled
 
 const draw_guidelines: bool = true
-const draw_linegutter: bool = true
+const draw_linegutter: bool = false
 
 func _enable_plugin() -> void:
   if not Engine.is_editor_hint(): return
@@ -15,7 +15,6 @@ func _disable_plugin() -> void:
   sig_plugin_disabled.emit()
 
 func _editor_script_changed(_s: Script)->void:
-  print(_editor_script_changed)
   var script_editor: ScriptEditor = EditorInterface.get_script_editor()
   if not script_editor: return
   var editor_base: ScriptEditorBase = script_editor.get_current_editor()
