@@ -3,7 +3,10 @@ extends EditorPlugin
 
 signal sig_plugin_disabled
 
+# Draw indent guidelines
 const draw_guidelines: bool = true
+
+# Draw sible line gutter
 const draw_linegutter: bool = true
 
 func _enter_tree() -> void:
@@ -66,7 +69,9 @@ class CodeEditorGuideLine extends Node:
   const codeblock_guidelines_style: CodeblockGuidelinesStyle = CodeblockGuidelinesStyle.CODEBLOCK_GUIDE_STYLE_LINE_CLOSE
   const codeblock_guideline_drawside: CodeblockGuidelinesOffset = CodeblockGuidelinesOffset.CODEBLOCK_GUIDE_OFFSET_MIDDLE
 
-  var code_edit: CodeEdit
+  const editor_scale: int = 100 # Used to scale values, but almost useless now
+
+  var code_edit: CodeEdit # Reference to CodeEdit
 
   func _init(p_code_edit: CodeEdit, exit_sig: Signal)-> void:
     code_edit = p_code_edit
@@ -76,227 +81,210 @@ class CodeEditorGuideLine extends Node:
     code_edit.draw.connect(_draw_appendix)
     code_edit.queue_redraw()
 
-  #region CodeEdit bindings
-  func is_in_string(p_line: int)->int: return code_edit.is_in_string(p_line)
-
-  func is_in_comment(p_line: int)->int: return code_edit.is_in_comment(p_line)
-
-  func is_line_folded(p_line: int)->bool: return code_edit.is_line_folded(p_line)
-
-  func get_line(p_line: int)->String: return code_edit.get_line(p_line)
-
-  func _is_line_hidden(p_line: int)->bool: return false #code_edit._is_line_hidden(p_line)
-
-  func get_indent_level(p_line: int)->int: return code_edit.get_indent_level(p_line)
-
-  func get_line_count()->int: return code_edit.get_line_count()
-
-  func get_delimiter_end_position(line: int, column: int)->Vector2: return code_edit.get_delimiter_end_position(line, column)
-
-  func get_total_gutter_width()->int: return code_edit.get_total_gutter_width()
-
-  func style_normal()->StyleBox:
-    return code_edit.get_theme_stylebox("normal", "CodeEdit")
-
-  func font()->Font:
-    return code_edit.get_theme_font("font", "CodeEdit") # ???
-
-  func font_size()->int:
-    return code_edit.get_theme_font_size("font_size", "CodeEdit") # ???
-
-  func get_v_scroll()->int:
-    return code_edit.scroll_vertical
-
-  func get_h_scroll()->int:
-    return code_edit.scroll_horizontal
-
-  func get_first_visible_line()-> int:
-    return code_edit.get_first_visible_line()
-
-  func get_visible_line_count()->int:
-    return code_edit.get_visible_line_count()
-
-  func is_smooth_scroll_enabled()->bool:
-    return code_edit.scroll_smooth
-
-  func auto_brace_completion_pairs()-> Dictionary:
-    return code_edit.auto_brace_completion_pairs
-
-  func get_caret_line(caret_index: int = 0)-> int:
-    return code_edit.get_caret_line(caret_index)
-
-  func get_visible_line_count_in_range(from_line: int, to_line: int)-> int:
-    return code_edit.get_visible_line_count_in_range(from_line, to_line)
-
-  func get_line_height()->int:
-    return code_edit.get_line_height()
-
-  #endregion CodeEdit bindings
+  # Return value scaled by editor scale
+  func scaled(p_val: float)-> float:
+    return p_val * (float(editor_scale) / 100.0)
 
   func _draw_appendix()-> void:
-    var row_height: int = get_line_height()
-    var code_edit_ci: RID = code_edit.get_canvas_item()
-    # /* Codeblock Guidelines */
     if codeblock_guidelines_style == CodeblockGuidelinesStyle.CODEBLOCK_GUIDE_STYLE_NONE: return
-    #print(style_normal().get_margin(SIDE_TOP)) # 5
-    #print(style_normal().get_margin(SIDE_LEFT)) # 6
-    #print(style_normal().get_margin(SIDE_RIGHT)) # 6
-    #print(style_normal().get_margin(SIDE_BOTTOM)) # 5
-    #print(get_total_gutter_width()) #79
-    var xmargin_beg: int = get_total_gutter_width() + style_normal().get_margin(SIDE_TOP)
-    var space_width: float = font().get_char_size(" ".unicode_at(0), font_size()).x
-    var v_scroll: int = get_v_scroll()
-    var h_scroll: int = get_h_scroll()
+
+    # Per draw "Consts"
+    var lines_count: int = code_edit.get_line_count()
+    var style_box: StyleBox = code_edit.get_theme_stylebox("normal")
+    var font: Font = code_edit.get_theme_font("font")
+    var font_size: int = code_edit.get_theme_font_size("font_size")
+    var xmargin_beg: int = style_box.get_margin(SIDE_LEFT) + code_edit.get_total_gutter_width()
+    var row_height: int = code_edit.get_line_height()
+    var space_width: float = font.get_char_size(" ".unicode_at(0), font_size).x
+    var v_scroll: float = code_edit.scroll_vertical
+    var h_scroll: float = code_edit.scroll_horizontal
+
+    # X Offset
+    var guideline_offset: float
+    if codeblock_guideline_drawside == CodeblockGuidelinesOffset.CODEBLOCK_GUIDE_OFFSET_LEFT:
+      guideline_offset = 0.0
+    elif codeblock_guideline_drawside == CodeblockGuidelinesOffset.CODEBLOCK_GUIDE_OFFSET_MIDDLE:
+      guideline_offset = space_width / 2.0
+    elif codeblock_guideline_drawside == CodeblockGuidelinesOffset.CODEBLOCK_GUIDE_OFFSET_RIGHT:
+      guideline_offset = space_width
+
+    var caret_idx: int = code_edit.get_caret_line()
 
     # // Let's avoid guidelines out of view.
-    var visible_lines_from: int = maxi(get_first_visible_line() - 1, 0)
-    var visible_lines_to: int = mini(visible_lines_from + get_visible_line_count() + 1 + (1 if is_smooth_scroll_enabled() else 0), get_line_count())
+    var visible_lines_from: int = maxi(code_edit.get_first_visible_line() , 0)
+    var visible_lines_to: int = mini(code_edit.get_last_full_visible_line() + int(code_edit.scroll_smooth) + 10, lines_count)
 
+    # V scroll bugged when you fold one of the last block
+    var vscroll_delta: float = maxf(v_scroll, visible_lines_from) - visible_lines_from
 
+    # Inlude last ten lines
+    if lines_count - visible_lines_to <= 10:
+      visible_lines_to = lines_count
+
+    # Generate lines
+    var lines_builder: LinesInCodeEditor = LinesInCodeEditor.new(code_edit)
+    lines_builder.build(visible_lines_from, visible_lines_to)
+
+    # Prepare draw
     var points: PackedVector2Array
     var colors: PackedColorArray
     var block_ends: PackedInt32Array
-    for i: int in visible_lines_to:
-      if _is_line_hidden(i): continue
+    for line: LineInCodeEditor in lines_builder.output:
+      var _x: float = guideline_offset + xmargin_beg - h_scroll + line.indent * code_edit.indent_size * space_width
+      # Hide lines under gutters
+      if _x < xmargin_beg: continue
 
-      if _can_fold_line(i):
-        var block_start: int = i # // This is a line that can potentially fold.
-        var block_end: int = _get_fold_line_ending(block_start)
+      # Line color
+      var color: Color = codeblock_guideline_color
+      if caret_idx > line.lineno_from and caret_idx <= line.lineno_to and lines_builder.indent_level(caret_idx) == line.indent + 1:
+        # TODO: If caret not visible on screen line will not highlighted
+        color = codeblock_guideline_active_color
 
-        if block_end <= 0: continue
+      # // Stack multiple guidelines.
+      var line_no: int = line.lineno_to
+      var offset_y: float = scaled(minf(block_ends.count(line_no) * 2.0, font.get_height(font_size) / 2.0))
 
-        var indent_level_start: int = get_indent_level(i)
-        var indent_level_inner: int = get_indent_level(i + 1)
+      var point_start: Vector2 = Vector2(_x, row_height * (line.start - vscroll_delta))
+      var point_end: Vector2 = point_start + Vector2(0.0, row_height * line.length - offset_y)
+      points.append_array([point_start, point_end])
+      colors.append(color)
 
-        # // Check if this codeblock contains the caret.
-        var color: Color = codeblock_guideline_color
-        var caret_idx: int = get_caret_line()
+      if codeblock_guidelines_style == CodeblockGuidelinesStyle.CODEBLOCK_GUIDE_STYLE_LINE_CLOSE and line.close_length > 0:
+        var line_indent: int = code_edit.get_indent_level(line_no) / code_edit.indent_size + 1
+        var point_side: Vector2 = point_end + Vector2(line.close_length * code_edit.indent_size * space_width - guideline_offset, 0.0)
 
-        if caret_idx > block_start and caret_idx <= block_end and get_indent_level(caret_idx) == indent_level_inner:
-          color = codeblock_guideline_active_color
-
-        var guideline_offset: float
-        if codeblock_guideline_drawside == CodeblockGuidelinesOffset.CODEBLOCK_GUIDE_OFFSET_LEFT:
-          guideline_offset = 0.0
-        elif codeblock_guideline_drawside == CodeblockGuidelinesOffset.CODEBLOCK_GUIDE_OFFSET_MIDDLE:
-          guideline_offset = space_width / 2
-        elif codeblock_guideline_drawside == CodeblockGuidelinesOffset.CODEBLOCK_GUIDE_OFFSET_RIGHT:
-          guideline_offset = space_width
-
-        var indent_guide_x: float = (indent_level_start * space_width + guideline_offset) + xmargin_beg - h_scroll
-
-        var skipped_lines_to_start: int = block_start - get_visible_line_count_in_range(0, block_start)
-        var skipped_lines_to_end: int = block_end - get_visible_line_count_in_range(0, block_end)
-        var visible_indent_start: int = (block_start - v_scroll - skipped_lines_to_start)
-        var visible_indent_end: int = (block_end - v_scroll - skipped_lines_to_end)
-
-        # // Stack multiple guidelines.
-        var offset_y: float = minf(block_ends.count(block_end) * 2.0, font().get_height(font_size()) / 2.0)
-
-        #// Vertical line to the end.
-        var point_start: Vector2 = Vector2(indent_guide_x, row_height * visible_indent_start)
-        var point_end: Vector2 = Vector2(indent_guide_x, row_height * visible_indent_end - offset_y)
-
-        #RenderingServer.canvas_item_add_line(code_edit_ci, point_start, point_end, color, 1.0)
-        points.append_array([point_start, point_end])
+        points.append_array([point_end, point_side])
         colors.append(color)
+        block_ends.append(line_no)
 
+    # Draw lines
+    if points.size() > 0:
+      # As documentation said, no need to scale line width
+      RenderingServer.canvas_item_add_multiline(code_edit.get_canvas_item(), points, colors, 1.0)
+    pass
 
-        if codeblock_guidelines_style == CodeblockGuidelinesStyle.CODEBLOCK_GUIDE_STYLE_LINE_CLOSE and block_end <= visible_lines_to:
-          # // Horizontal guideline starting from the end,
-          # // Drawn whenever a closing bracket underneath is unavailable, or already taken by a higher guideline.
-          var line_below: String = get_line(block_end + 1).strip_edges()
+# Lines builder
+class LinesInCodeEditor:
+  var output: Array[LineInCodeEditor] = []
+  var lines: Array[LineInCodeEditor] = []
 
-          var bottom_begins_with_close_brace: bool = false
-          var auto_brace_completion_pairs: Dictionary = auto_brace_completion_pairs()
+  var ce: CodeEdit
 
-          for pair_idx: String in auto_brace_completion_pairs:
-            if line_below.begins_with(auto_brace_completion_pairs[pair_idx]):
-              bottom_begins_with_close_brace = true
+  func _init(p_ce: CodeEdit) -> void:
+    self.ce = p_ce
 
-          if !bottom_begins_with_close_brace or block_ends.has(block_end):
-            var indent_guide_side_x: float = indent_guide_x + (get_indent_level(block_end) - indent_level_start) * space_width - guideline_offset
-            var point_side: Vector2 = Vector2(indent_guide_side_x, row_height * visible_indent_end - offset_y)
+  # Check if line is empty
+  func is_line_empty(p_line: int)-> bool:
+    return ce.get_line(p_line).strip_edges().length() == 0
 
-            #RenderingServer.canvas_item_add_line(code_edit_ci, point_end, point_side, color, 1.0)
-            points.append_array([point_end, point_side])
-            colors.append(color)
+  # Return indent level 0,1,2,3..
+  func indent_level(p_line: int)-> int:
+    return ce.get_indent_level(p_line) / ce.indent_size
 
-        block_ends.append(block_end)
-    if points.size() > 0 :
-      RenderingServer.canvas_item_add_multiline(code_edit_ci, points, colors, 1.0)
+  # Return comment index in line
+  func get_comment_index(p_line: int)-> int:
+    return ce.is_in_comment(p_line)
 
-  func _can_fold_line(p_line: int)-> bool:
-    if p_line + 1 >= get_line_count() or get_line(p_line).strip_edges().length() == 0 :
-      return false
+  # Check if first visible character in line is comment
+  func is_line_full_commented(p_line: int)->bool:
+    return get_comment_index(p_line) == ce.get_first_non_whitespace_column(p_line)
 
-    if (_is_line_hidden(p_line) or is_line_folded(p_line)):
-      return false
-
-    # /* Check for full multiline line or block strings / comments. */
-    var in_comment: int = is_in_comment(p_line)
-    var in_string: int = is_in_string(p_line) if in_comment == -1 else -1
-
-    if in_string != -1 or in_comment != -1:
-      if code_edit.get_delimiter_start_position(p_line, get_line(p_line).length() - 1).y != p_line:
-        return false
-
-      var delimter_end_line: int = code_edit.get_delimiter_end_position(p_line, get_line(p_line).length() - 1).y
-      # /* No end line, therefore we have a multiline region over the rest of the file. */
-      if delimter_end_line == -1:
-        return true
-
-      # /* End line is the same therefore we have a block. */
-      if delimter_end_line == p_line:
-        # /* Check we are the start of the block. */
-        if p_line - 1 >= 0:
-          if (in_string != -1 and is_in_string(p_line - 1) != -1) or (in_comment != -1 and is_in_comment(p_line - 1) != -1):
-            return false
-
-        # /* Check it continues for at least one line. */
-        return (in_string != -1 and is_in_string(p_line + 1) != -1) or (in_comment != -1 and is_in_comment(p_line + 1) != -1)
-
-      return (in_string != -1 and is_in_string(delimter_end_line) != -1) or (in_comment != -1 and is_in_comment(delimter_end_line) != -1)
-
-    # /* Otherwise check indent levels. */
-    var start_indent: int = get_indent_level(p_line)
-    for i:int in range(p_line + 1, get_line_count()):
-      if is_in_string(i) != -1 or is_in_comment(i) != -1 or get_line(i).strip_edges().length() == 0:
+  # Main func
+  func build(p_lines_from: int, p_lines_to: int)->void:
+    var line: int = p_lines_from
+    var skiped_lines: int = 0
+    var internal_line:int = -1
+    while line < p_lines_to:
+      internal_line += 1
+      #If line empty, count it and pass to next line
+      if is_line_empty(line):
+        skiped_lines += 1
+        line += 1
         continue
-      return get_indent_level(i) > start_indent
 
-    return false
-
-  func _get_fold_line_ending(p_line: int)-> int:
-    # /* Find the last line to be hidden. */
-    var line_count: int = get_line_count() - 1
-    var end_line: int = line_count
-
-    var in_comment: int = is_in_comment(p_line)
-    var in_string: int = is_in_string(p_line) if in_comment == -1 else -1
-    if in_string != -1 or in_comment != -1:
-      end_line = get_delimiter_end_position(p_line, get_line(p_line).length() - 1).y
-      # /* End line is the same therefore we have a block of single line delimiters. */
-      if end_line == p_line :
-        for i: int in range(p_line + 1, line_count):
-          if (in_string != -1 and is_in_string(i) == -1) or (in_comment != -1 and is_in_comment(i) == -1):
-            break
-          end_line = i
-    else:
-      var start_indent: int = get_indent_level(p_line)
-      for i: int in range(p_line + 1, line_count):
-        if get_line(i).strip_edges().length() == 0:
+      # Current line indent
+      var line_indent: int = self.indent_level(line)
+      if line_indent == 0:
+        if is_line_full_commented(line):
+          skiped_lines += 1
+          line += 1
           continue
 
-        if get_indent_level(i) > start_indent:
-          end_line = i
-          continue
+      # Close lines with indent > current line_indent
+      for i:int in range(line_indent, lines.size()):
+        var v: LineInCodeEditor = lines[i]
+        v.lineno_to = line - skiped_lines - 1
+        v.close_length = self.indent_level(v.lineno_to) - v.indent
+        output.append(v)
 
-        if is_in_string(i) == -1 and is_in_comment(i) == -1:
-          break
+      if line_indent < lines.size():
+        lines.resize(line_indent)
 
-    return end_line
+      # Create new line or extend existing
+      for i: int in line_indent:
+        if lines.size() - 1 < i: # Create
+          var l: LineInCodeEditor = LineInCodeEditor.new()
+          # Extend start line up
+          l.start = internal_line - skiped_lines
+          l.length = 1 + skiped_lines
+          l.indent = i
+          l.lineno_from = line
+          l.lineno_to = line
+          lines.append(l)
+        else:
+          # Extend existing line
+          lines[i].length += 1 + skiped_lines
 
+      skiped_lines = 0
+
+      # Skip folded lines and regions
+      if ce.is_line_folded(line):
+        if ce.is_line_code_region_start(line):
+          # Folded region
+          for subline: int in range(line + 1, p_lines_to):
+            if not ce.is_line_code_region_end(subline): continue
+            line = subline
+            break # Break for cycle
+          pass
+        else:
+          # Usual fold
+          var skipped_sublines: int = 0
+          for subline: int in range(line + 1, p_lines_to):
+            if is_line_empty(subline):
+              skipped_sublines += 1
+              continue
+            var subline_indent: int = self.indent_level(subline)
+            if subline_indent > line_indent:
+              skipped_sublines = 0 # Line not empty
+              continue
+            line = subline - skipped_sublines - 1
+            break # Break for cycle
+      line += 1
+    #End of cycle
+
+    # Output all other lines
+    for i:int in lines.size():
+      var v: LineInCodeEditor = lines[i]
+      if p_lines_to == ce.get_line_count():
+        v.lineno_to = (p_lines_to - 1) - skiped_lines
+        v.close_length = ce.get_indent_level(v.lineno_to) / ce.indent_size - v.indent
+        v.length += 1 - skiped_lines
+      else:
+        v.lineno_to = p_lines_to - 1
+        v.length += 1
+      output.append(v)
+    lines.resize(0)
+
+# Used as struct representiing line
+class LineInCodeEditor:
+  var start: int = 0 # Line start X
+  var length: int = 1 # Line length from start
+  var indent: int = -1 # Line indent
+  var lineno_from: int = -1 # Line "from" number in CodeEdit
+  var lineno_to: int = -1 # Line "to" number in CodeEdit
+  var close_length: int = 0 # Side/Close line length
+
+# Single line gutter
 class CodeEditorGutterLine extends Node:
 
   const gutter_color = Color(0.8, 0.8, 0.8, 0.5)
