@@ -70,6 +70,7 @@ class CodeEditorGuideLine extends Node:
   const codeblock_guideline_drawside: CodeblockGuidelinesOffset = CodeblockGuidelinesOffset.CODEBLOCK_GUIDE_OFFSET_MIDDLE
 
   const editor_scale: int = 100 # Used to scale values, but almost useless now
+  const codeblock_guideline_width: float = 1.0
 
   var code_edit: CodeEdit # Reference to CodeEdit
 
@@ -142,7 +143,7 @@ class CodeEditorGuideLine extends Node:
 
       # // Stack multiple guidelines.
       var line_no: int = line.lineno_to
-      var offset_y: float = scaled(minf(block_ends.count(line_no) * 2.0, font.get_height(font_size) / 2.0))
+      var offset_y: float = scaled(minf(block_ends.count(line_no) * 2.0, font.get_height(font_size) / 2.0) + 2.0)
 
       var point_start: Vector2 = Vector2(_x, row_height * (line.start - vscroll_delta))
       var point_end: Vector2 = point_start + Vector2(0.0, row_height * line.length - offset_y)
@@ -160,7 +161,7 @@ class CodeEditorGuideLine extends Node:
     # Draw lines
     if points.size() > 0:
       # As documentation said, no need to scale line width
-      RenderingServer.canvas_item_add_multiline(code_edit.get_canvas_item(), points, colors, 1.0)
+      RenderingServer.canvas_item_add_multiline(code_edit.get_canvas_item(), points, colors, codeblock_guideline_width)
     pass
 
 # Lines builder
@@ -239,13 +240,15 @@ class LinesInCodeEditor:
 
       # Skip folded lines and regions
       if ce.is_line_folded(line):
+        var subline_found: bool = false
         if ce.is_line_code_region_start(line):
           # Folded region
           for subline: int in range(line + 1, p_lines_to):
             if not ce.is_line_code_region_end(subline): continue
             line = subline
+            subline_found = true
             break # Break for cycle
-          pass
+          if not subline_found: line = p_lines_to
         else:
           # Usual fold
           var skipped_sublines: int = 0
@@ -258,7 +261,9 @@ class LinesInCodeEditor:
               skipped_sublines = 0 # Line not empty
               continue
             line = subline - skipped_sublines - 1
+            subline_found = true
             break # Break for cycle
+          if not subline_found: line = p_lines_to
       line += 1
     #End of cycle
 
