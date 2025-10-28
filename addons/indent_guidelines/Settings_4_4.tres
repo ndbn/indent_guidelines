@@ -1,21 +1,6 @@
 [gd_resource type="Resource" script_class="IndentGuidelinesSettings" load_steps=2 format=3 uid="uid://bm1x2j5jakr6k"]
 
-[ext_resource type="Script" path="res://addons/indent_guidelines/Settings.gd" id="1_w06gg"]
+[ext_resource type="Script" uid="uid://do4qww10hg5ed" path="res://addons/indent_guidelines/Settings.gd" id="1_w06gg"]
 
 [resource]
 script = ExtResource("1_w06gg")
-guideline_color = Color(0.8, 0.8, 0.8, 0.3)
-guideline_active_color = Color(0.8, 0.8, 0.8, 0.55)
-guidelines_style = 1
-guideline_drawside = 1
-guideline_width = 1.0
-guideline_y_offset = -2.0
-guideline_keep_caret = true
-draw_fullheight_line = true
-fillheight_line_color = Color(0.9, 0.9, 0.9, 0.1)
-fillheight_x_offset = -2.0
-draw_foldmarks = true
-foldmark_color = Color(0.9, 0.9, 0.9, 0.9)
-foldmark_width = 3.0
-foldmark_x_offset = -3.0
-foldmark_y_offset = 0.0
