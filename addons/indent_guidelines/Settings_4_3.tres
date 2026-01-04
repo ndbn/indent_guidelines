@@ -1,8 +1,0 @@
-[gd_resource type="Resource" script_class="IndentGuidelinesSettings" load_steps=2 format=3 uid="uid://d256qcearrd18"]
-
-[ext_resource type="Script" path="res://addons/indent_guidelines/Settings.gd" id="1_wx83l"]
-
-[resource]
-script = ExtResource("1_wx83l")
-guideline_y_offset = -1.0
-foldmark_y_offset = 2.0

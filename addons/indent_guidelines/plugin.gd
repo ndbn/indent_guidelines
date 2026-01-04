@@ -6,10 +6,7 @@ extends EditorPlugin
 var ids_code_edits: Array[int]   # CodeEdit instance ID's
 var rids_code_edits: Array[RID]	 # Corresponding canvas_item RID's
 
-const SETTINGS_4_3: IndentGuidelinesSettings = preload("./Settings_4_3.tres")
-const SETTINGS_4_4: IndentGuidelinesSettings = preload("./Settings_4_4.tres")
-var settings: IndentGuidelinesSettings = SETTINGS_4_3 if Engine.get_version_info().hex <= 0x040300 else	SETTINGS_4_4
-
+var settings: IndentGuidelinesSettings = IndentGuidelinesSettings.new()
 
 func _enter_tree() -> void:
 	if not Engine.is_editor_hint(): return
@@ -28,6 +25,17 @@ func _exit_tree() -> void:
 	ids_code_edits.clear()
 	rids_code_edits.clear()
 
+func _notification(what: int) -> void:
+	if what == EditorSettings.NOTIFICATION_EDITOR_SETTINGS_CHANGED:
+		var editor_settings: EditorSettings = EditorInterface.get_editor_settings()
+		if editor_settings.check_changed_settings_in_group(settings.settings_group):
+			settings.update_settings(false)
+			for i: int in len(ids_code_edits):
+				var code_edit: CodeEdit = instance_from_id(ids_code_edits[i])
+				if code_edit != null:
+					code_edit.add_theme_constant_override("completion_lines", settings.tweak_completion_lines)
+					code_edit.add_theme_constant_override("completion_max_width", settings.tweak_completion_max_width)
+					code_edit.queue_redraw()
 
 func try_get_code_edit() -> CodeEdit:
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
@@ -59,6 +67,10 @@ func _editor_script_changed(_s: Script)->void:
 
 	ids_code_edits.push_back(code_edit.get_instance_id())
 	rids_code_edits.push_back(draw_rid)
+
+	# Override theme constants
+	code_edit.add_theme_constant_override("completion_lines", settings.tweak_completion_lines)
+	code_edit.add_theme_constant_override("completion_max_width", settings.tweak_completion_max_width)
 
 	code_edit.draw.connect(_draw_appendix.bind(code_edit, draw_rid))
 	code_edit.queue_redraw()
@@ -180,10 +192,6 @@ func build_lines(code_edit: CodeEdit, p_lines_from: int, p_lines_to: int, output
 	pass #/build_lines
 
 func _draw_appendix(code_edit: CodeEdit, draw_rid: RID)-> void:
-
-	# Override theme constants
-	code_edit.add_theme_constant_override("completion_lines", settings.tweak_completion_lines)
-	code_edit.add_theme_constant_override("completion_max_width", settings.tweak_completion_max_width)
 
 	# Per draw "Consts"
 	var lines_count: int = code_edit.get_line_count()

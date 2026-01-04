@@ -1,9 +1,0 @@
-[gd_resource type="Resource" script_class="IndentGuidelinesSettings" format=3 uid="uid://bm1x2j5jakr6k"]
-
-[ext_resource type="Script" uid="uid://do4qww10hg5ed" path="res://addons/indent_guidelines/Settings.gd" id="1_w06gg"]
-
-[resource]
-script = ExtResource("1_w06gg")
-guideline_draw_root_guides = false
-tweak_completion_lines = 15
-tweak_completion_max_width = 200
