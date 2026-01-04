@@ -6,6 +6,7 @@ enum GuidelinesStyle { LINE, LINE_CLOSE}
 enum GuidelinesOffset {LEFT = 0, MIDDLE, RIGHT}
 
 @export_category("Guidelines")
+@export var draw_guidelines: bool = true
 @export var guideline_color: Color = Color(0.8, 0.8, 0.8, 0.3)
 @export var guideline_active_color: Color = Color(0.8, 0.8, 0.8, 0.55)
 @export var guidelines_style: GuidelinesStyle = GuidelinesStyle.LINE_CLOSE
@@ -29,3 +30,9 @@ enum GuidelinesOffset {LEFT = 0, MIDDLE, RIGHT}
 @export var foldmark_width: float = 3.0
 @export var foldmark_x_offset: float = -3.0
 @export var foldmark_y_offset: float = 0.0
+
+
+# CodeEdit Tweaks
+@export_category("CodeEdit tweaks")
+@export var tweak_completion_lines: int = 7
+@export var tweak_completion_max_width: int = 50
