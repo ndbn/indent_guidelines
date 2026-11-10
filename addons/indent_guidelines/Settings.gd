@@ -36,6 +36,9 @@ enum GuidelinesOffset {LEFT = 0, MIDDLE, RIGHT}
 @export var tweak_completion_lines: int = 7
 @export var tweak_completion_max_width: int = 50
 
+# Color overrides
+@export_category("Color overrides")
+@export var override_colors_array: PackedColorArray = PackedColorArray()
 
 #################################################
 
@@ -94,3 +97,5 @@ func update_settings(p_init: bool)->void:
 
 	editor_settings_setget_init(S_NAME("tweaks/tweak_completion_lines"), "tweak_completion_lines", p_init)
 	editor_settings_setget_init(S_NAME("tweaks/tweak_completion_max_width"), "tweak_completion_max_width", p_init)
+
+	editor_settings_setget_init(S_NAME("color_overrides/override_colors_array"), "override_colors_array", p_init)

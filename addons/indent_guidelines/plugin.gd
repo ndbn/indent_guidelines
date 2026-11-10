@@ -282,6 +282,12 @@ func _draw_appendix(code_edit: CodeEdit, draw_rid: RID)-> void:
 			if caret_idx >= line.lineno_from and caret_idx <= line.lineno_to and caret_indent == line.indent + indent_size:
 				color = settings.guideline_active_color
 
+			var indent_num: int = line.indent / indent_size
+			if len(settings.override_colors_array) > indent_num:
+				var overrided_color: Color = settings.override_colors_array[indent_num]
+				overrided_color.a = color.a
+				color = overrided_color
+
 			# // Stack multiple guidelines.
 			var line_no: int = line.lineno_to
 			var offset_y: float = scaled(minf(block_ends.count(line_no) * 2.0, font.get_height(font_size) / 2.0) + 2.0)
