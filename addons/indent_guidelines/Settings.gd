@@ -38,7 +38,7 @@ enum GuidelinesOffset {LEFT = 0, MIDDLE, RIGHT}
 
 # Color overrides
 @export_category("Color overrides")
-@export var override_colors_array: PackedColorArray = PackedColorArray()
+@export var override_colors_array: PackedColorArray = PackedColorArray([guideline_color])
 
 #################################################
 
